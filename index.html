@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JalSuraksha — AI Water Resource Intelligence</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter','sans-serif'],
+          display: ['Manrope','sans-serif'],
+        },
+        colors: {
+          navy: '#062A4D',
+          navyDark: '#031C33',
+          blue: '#1683D8',
+          blueLight: '#EAF5FF',
+          green: '#27AE60',
+          greenLight: '#EAF8EF',
+          yellow: '#F2C94C',
+          orange: '#F2994A',
+          red: '#EB5757',
+          bgmain: '#F4F7FA',
+          txt: '#172B4D',
+          muted: '#6B7C93',
+        },
+        borderRadius: { card: '14px' },
+        boxShadow: { card: '0 2px 14px rgba(6,42,77,0.07)', cardHover: '0 8px 28px rgba(6,42,77,0.12)' },
+      }
+    }
+  }
+</script>
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  .font-display { font-family: 'Manrope', sans-serif; }
+  body { background: #F4F7FA; color: #172B4D; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #cfe0ee; border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .sidebar-scroll::-webkit-scrollbar { width: 5px; }
+  .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 8px; }
+
+  .page { display: none; animation: fadeIn .35s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform:translateY(0);} }
+
+  .navlink { transition: background .15s ease, color .15s ease; }
+  .navlink:hover { background: rgba(255,255,255,0.08); }
+  .navlink.active { background: linear-gradient(90deg, rgba(22,131,216,0.9), rgba(22,131,216,0.65)); box-shadow: 0 4px 14px rgba(22,131,216,0.35); }
+
+  .card { background:#fff; border-radius: 14px; box-shadow: 0 2px 14px rgba(6,42,77,0.07); }
+  .card:hover.hoverable { box-shadow: 0 8px 28px rgba(6,42,77,0.12); }
+
+  .kpi-value { font-variant-numeric: tabular-nums; }
+
+  .district-shape { cursor: pointer; stroke: #ffffff; stroke-width: 1.5; transition: filter .15s ease, transform .15s ease; }
+  .district-shape:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .district-shape.selected { stroke: #062A4D; stroke-width: 3; }
+
+  .modal-backdrop { background: rgba(6,42,77,0.45); backdrop-filter: blur(2px); }
+
+  input[type=range] { -webkit-appearance: none; height: 6px; border-radius: 999px; background: #e2e9f1; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#1683D8; border:3px solid #fff; box-shadow:0 1px 6px rgba(0,0,0,.25); cursor:pointer; }
+
+  .toggle-switch { width:40px; height:22px; border-radius:999px; background:#d7e2ee; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+  .toggle-switch.on { background:#27AE60; }
+  .toggle-switch .dot { position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .toggle-switch.on .dot { left:20px; }
+
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+
+  .sidebar-collapsed .nav-label, .sidebar-collapsed .brand-text, .sidebar-collapsed .sidebar-footer-text { display:none; }
+  .sidebar-collapsed { width: 76px !important; }
+  .sidebar-collapsed .navlink { justify-content: center; }
+
+  #aiFab { transition: transform .15s ease; }
+  #aiFab:hover { transform: scale(1.06); }
+
+  .toast { animation: toastIn .25s ease, toastOut .4s ease 2.6s forwards; }
+  @keyframes toastIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes toastOut { to{opacity:0; transform:translateY(-8px);} }
+
+  @media (max-width: 1024px) {
+    #sidebar { position: fixed; z-index: 50; height: 100vh; transform: translateX(-100%); transition: transform .25s ease; }
+    #sidebar.mobile-open { transform: translateX(0); }
+    #mainWrap { margin-left: 0 !important; }
+  }
+</style>
+</head>
+<body class="bg-bgmain text-txt">
+
+<div id="drawerOverlay" class="fixed inset-0 bg-black/40 z-40 hidden lg:hidden" onclick="closeMobileSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar" class="bg-navy text-white w-[260px] flex-shrink-0 flex flex-col h-screen fixed top-0 left-0 z-50 transition-all duration-200">
+  <div class="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+    <div class="w-9 h-9 rounded-lg bg-blue/20 flex items-center justify-center text-xl flex-shrink-0">💧</div>
+    <div class="brand-text leading-tight">
+      <div class="font-display font-extrabold text-lg tracking-tight">JalSuraksha</div>
+      <div class="text-[11px] text-blue-100/70 -mt-0.5" style="color:#9fc9ec">Predict • Protect • Preserve</div>
+    </div>
+  </div>
+
+  <nav id="navList" class="flex-1 overflow-y-auto sidebar-scroll py-3 px-3 space-y-0.5"></nav>
+
+  <div class="sidebar-footer-text px-4 py-4 border-t border-white/10">
+    <div class="rounded-xl overflow-hidden relative h-20">
+      <img src="https://images.unsplash.com/photo-1519046904884-53103b34b206?w=400&q=60" class="w-full h-full object-cover opacity-40" />
+      <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
+        <div class="font-display font-bold text-sm leading-tight">Save Water<br/>Secure Tomorrow</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div id="mainWrap" class="transition-all duration-200" style="margin-left:260px;">
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="flex items-center gap-3 px-4 lg:px-6 py-3">
+      <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100 flex-shrink-0">
+        <i data-lucide="menu" class="w-5 h-5 text-navy"></i>
+      </button>
+
+      <div class="relative flex-1 max-w-md hidden sm:block">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted"></i>
+        <input id="globalSearch" placeholder="Search location (city, district, village)..." class="w-full bg-slate-100 rounded-full pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue/40" />
+      </div>
+
+      <div class="flex items-center gap-1.5 bg-orange/10 text-orange px-3 py-1.5 rounded-full text-xs font-semibold ml-auto lg:ml-0 relative group cursor-default">
+        <span class="w-2 h-2 rounded-full bg-orange animate-pulse"></span> DEMO MODE
+        <div class="absolute top-full right-0 mt-2 w-64 bg-navyDark text-white text-[11px] font-normal rounded-lg p-2.5 opacity-0 group-hover:opacity-100 pointer-events-none transition shadow-xl z-50">
+          Data shown in this prototype is simulated and is not official real-time government data.
+        </div>
+      </div>
+
+      <button class="p-2 rounded-lg hover:bg-slate-100 relative" onclick="openPanel('alertsPanel')">
+        <i data-lucide="bell" class="w-5 h-5 text-navy"></i>
+        <span class="absolute -top-0.5 -right-0.5 bg-red text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">3</span>
+      </button>
+
+      <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+        <div class="w-9 h-9 rounded-full bg-blue text-white flex items-center justify-center font-semibold text-sm">AM</div>
+        <div class="hidden md:block leading-tight">
+          <div class="text-sm font-semibold">Aman Malik</div>
+          <div class="text-[11px] text-muted">Admin</div>
+        </div>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-muted hidden md:block"></i>
+      </div>
+    </div>
+    <div class="hidden lg:flex items-center justify-between px-6 pb-2 text-[11px] text-muted">
+      <span id="pageBreadcrumb" class="font-medium text-navy">Dashboard</span>
+      <span id="headerDateTime"></span>
+    </div>
+  </header>
+
+  <main id="pageHost" class="p-4 lg:p-6 max-w-[1600px] mx-auto"></main>
+</div>
+
+<!-- Floating AI Assistant Button -->
+<button id="aiFab" onclick="toggleAIChat()" class="fixed bottom-6 right-6 z-40 bg-blue text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center">
+  <i data-lucide="bot" class="w-6 h-6"></i>
+</button>
+
+<!-- AI Chat Panel -->
+<div id="aiChatPanel" class="fixed bottom-24 right-6 z-40 w-[92vw] max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 hidden flex-col overflow-hidden" style="height:520px;">
+  <div class="bg-navy text-white px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <i data-lucide="sparkles" class="w-4 h-4 text-yellow"></i>
+      <span class="font-semibold text-sm">JalSuraksha AI</span>
+    </div>
+    <button onclick="toggleAIChat()"><i data-lucide="x" class="w-4 h-4"></i></button>
+  </div>
+  <div id="aiMessages" class="flex-1 overflow-y-auto p-3 space-y-3 text-sm"></div>
+  <div id="aiQuickPrompts" class="px-3 pb-2 flex flex-wrap gap-1.5"></div>
+  <div class="p-3 border-t border-slate-200 flex gap-2">
+    <input id="aiInput" placeholder="Ask about water data..." class="flex-1 bg-slate-100 rounded-full px-3.5 py-2 text-sm outline-none" onkeydown="if(event.key==='Enter')sendAIMessage()" />
+    <button onclick="sendAIMessage()" class="bg-blue text-white w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="send" class="w-4 h-4"></i></button>
+  </div>
+</div>
+
+<div id="toastHost" class="fixed bottom-6 left-6 z-50 space-y-2"></div>
+
+<!-- Generic Modal Host -->
+<div id="modalHost" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4" onclick="if(event.target===this)closeModal()">
+  <div id="modalContent" class="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl"></div>
+</div>
+
+<script>
+// ============================================================
+// JalSuraksha — Mock / Simulated Data Layer
+// All values are DEMO DATA for prototype purposes only.
+// ============================================================
+
+const NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+  { id: 'groundwater', label: 'Groundwater Analysis', icon: 'droplets' },
+  { id: 'risk', label: 'Risk & Forecasting', icon: 'trending-down' },
+  { id: 'gis', label: 'GIS & Mapping', icon: 'map' },
+  { id: 'recharge', label: 'Recharge Planning', icon: 'sprout' },
+  { id: 'harvesting', label: 'Rainwater Harvesting', icon: 'cloud-rain' },
+  { id: 'demand', label: 'Water Demand', icon: 'gauge' },
+  { id: 'crop', label: 'Crop & Irrigation', icon: 'wheat' },
+  { id: 'quality', label: 'Water Quality', icon: 'flask-conical' },
+  { id: 'budget', label: 'Water Budget', icon: 'pie-chart' },
+  { id: 'simulator', label: 'What-If Simulator', icon: 'sliders-horizontal' },
+  { id: 'costbenefit', label: 'Cost-Benefit Analysis', icon: 'calculator' },
+  { id: 'iot', label: 'IoT Monitoring', icon: 'radio' },
+  { id: 'reports', label: 'Reports', icon: 'file-text' },
+  { id: 'citizen', label: 'Citizen Portal', icon: 'users' },
+  { id: 'ai', label: 'AI Assistant', icon: 'bot' },
+  { id: 'users', label: 'User Management', icon: 'user-cog' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
+];
+
+const KPI_DATA = [
+  { icon: 'droplet', label: 'Current Avg. Groundwater Level', value: 24.8, unit: 'm', trend: 5, trendDir: 'up', trendGood: false, context: 'vs. last year', color: 'blue' },
+  { icon: 'triangle-alert', label: 'High Risk Areas', value: 12, unit: '', trend: 3, trendDir: 'down', trendGood: true, context: 'vs. last month', color: 'red' },
+  { icon: 'users', label: 'Total Water Demand (Annual)', value: 482, unit: 'MLD', trend: 12, trendDir: 'up', trendGood: false, context: 'vs. last year', color: 'blue' },
+  { icon: 'sprout', label: 'Recharge Potential', value: 310, unit: 'MLD', trend: 28, trendDir: 'up', trendGood: true, context: 'with recommended structures', color: 'green' },
+  { icon: 'shield-check', label: 'Overall Water Security Index', value: 68, unit: '/100', trend: null, trendDir: null, trendGood: null, context: 'Moderate', color: 'yellow' },
+];
+
+// District map data — stylized coordinates (SVG viewBox 0 0 600 560), not real GIS geometry
+const DISTRICTS = [
+  { name: 'Meerut', risk: 'safe', level: 14.2, predicted: 15.0, depletion: 0.3, recharge: 120, issues: 'Stable extraction, seasonal variation', recommended: 'Monitoring wells',
+    path: 'M230,60 L300,45 L340,75 L330,120 L270,130 L215,105 Z' },
+  { name: 'Ghaziabad', risk: 'moderate', level: 21.6, predicted: 24.0, depletion: 0.5, recharge: 95, issues: 'Urban extraction pressure, declining recharge zones', recommended: 'Percolation Pond, Check Dam',
+    path: 'M270,130 L330,120 L360,165 L330,205 L275,195 L255,150 Z' },
+  { name: 'Hapur', risk: 'critical', level: 32.4, predicted: 35.1, depletion: 0.8, recharge: 78, issues: 'High extraction, Low recharge', recommended: 'Recharge Well, Percolation Pond',
+    path: 'M360,165 L420,150 L450,190 L430,235 L375,225 L330,205 Z' },
+  { name: 'Noida', risk: 'high', level: 28.1, predicted: 31.4, depletion: 0.7, recharge: 60, issues: 'Rapid urbanization, over-extraction', recommended: 'Recharge Shafts, Rooftop Harvesting',
+    path: 'M275,195 L330,205 L340,250 L300,285 L255,265 L245,220 Z' },
+  { name: 'Greater Noida', risk: 'high', level: 26.9, predicted: 29.8, depletion: 0.6, recharge: 68, issues: 'Industrial demand rising, low natural recharge', recommended: 'Check Dams, Recharge Wells',
+    path: 'M300,285 L340,250 L390,265 L400,315 L350,340 L305,325 Z' },
+  { name: 'Bulandshahr', risk: 'moderate', level: 20.3, predicted: 22.1, depletion: 0.4, recharge: 140, issues: 'Possible over-extraction, agriculture demand', recommended: 'Farm Ponds, Check Dams',
+    path: 'M375,225 L430,235 L460,280 L440,330 L390,315 L390,265 L340,250 L360,220 Z' },
+  { name: 'Mathura', risk: 'safe', level: 16.5, predicted: 17.9, depletion: 0.3, recharge: 155, issues: 'Seasonal fluctuation, low industrial load', recommended: 'Village ponds restoration',
+    path: 'M245,220 L255,265 L230,320 L175,330 L160,280 L200,240 Z' },
+  { name: 'Aligarh', risk: 'moderate', level: 22.8, predicted: 25.6, depletion: 0.5, recharge: 88, issues: 'Water quality risk (High TDS), moderate extraction', recommended: 'Recharge Trenches, Awareness Programs',
+    path: 'M350,340 L400,315 L440,330 L450,380 L400,410 L360,390 Z' },
+];
+
+const RISK_COLORS = { safe: '#27AE60', moderate: '#F2C94C', high: '#F2994A', critical: '#EB5757' };
+const RISK_LABELS = { safe: 'Safe', moderate: 'Moderate', high: 'High Risk', critical: 'Critical' };
+
+const ALERTS = [
+  { sev: 'critical', text: 'Critical groundwater decline detected in Hapur', time: '2 hours ago' },
+  { sev: 'warning', text: 'Possible over-extraction in Bulandshahr', time: '5 hours ago' },
+  { sev: 'warning', text: 'Water quality risk (High TDS) in Aligarh', time: '7 hours ago' },
+  { sev: 'info', text: 'Heavy rainfall expected in next 3 days', time: '1 day ago' },
+  { sev: 'critical', text: 'Recharge structure failure reported near Noida sector 62', time: '1 day ago' },
+  { sev: 'info', text: 'New IoT sensor cluster activated in Meerut', time: '2 days ago' },
+];
+
+const GW_TREND = {
+  years: [2020, 2021, 2022, 2023, 2024, 2025],
+  actual: [15.1, 17.8, 19.9, 21.7, 23.4, 24.8],
+  predicted10: [2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035],
+  predictedVals10: [24.8, 25.9, 27.0, 28.1, 29.6, 30.8, 31.9, 32.9, 33.8, 34.4, 34.8],
+};
+
+const DEMAND_SUPPLY = {
+  years: [2023, 2024, 2025, 2026, 2027],
+  demand: [452, 468, 482, 501, 522],
+  recharge: [268, 285, 310, 322, 335],
+};
+
+const WATER_BUDGET = { rainfall: 620, recharge: 310, extraction: 482, deficit: 172 };
+
+const AI_RECOMMENDATIONS = [
+  { title: 'Construct recharge wells in Hapur', priority: 'High', problem: 'Critical decline with high extraction and low natural recharge.', impact: '+38 MLD/year recharge', cost: '₹2.4 Cr', saved: '38 MLD/year', confidence: 91 },
+  { title: 'Implement rooftop rainwater harvesting', priority: 'High', problem: 'Urban rooftop runoff going largely unused across NCR districts.', impact: 'Reduces municipal demand by 8%', cost: '₹85 lakh (pilot)', saved: '12 MLD/year', confidence: 86 },
+  { title: 'Restore check dams in Bulandshahr', priority: 'Medium', problem: 'Seasonal runoff not captured due to degraded check dam structures.', impact: '+18 MLD/year recharge', cost: '₹1.1 Cr', saved: '18 MLD/year', confidence: 79 },
+  { title: 'Promote low-water crops in Aligarh', priority: 'Medium', problem: 'Water-intensive crop patterns increasing extraction stress.', impact: 'Reduces agri-demand by 14%', cost: '₹40 lakh (subsidy)', saved: '9 MLD/year', confidence: 74 },
+  { title: 'Regulate extraction in critical zones', priority: 'High', problem: 'Unregulated borewell drilling in critical-risk blocks.', impact: 'Slows depletion rate by 35%', cost: 'Policy — Low cost', saved: '22 MLD/year', confidence: 88 },
+];
+
+const RECHARGE_SITES = [
+  { site: 'Hapur Block', suitability: 94, structure: 'Recharge Well', x: 400, y: 195 },
+  { site: 'Bulandshahr', suitability: 89, structure: 'Check Dam', x: 415, y: 275 },
+  { site: 'Aligarh', suitability: 84, structure: 'Percolation Pond', x: 400, y: 360 },
+  { site: 'Greater Noida', suitability: 77, structure: 'Recharge Shaft', x: 345, y: 300 },
+  { site: 'Noida Sector 62', suitability: 71, structure: 'Rooftop Harvesting Cluster', x: 295, y: 235 },
+];
+
+const CROPS = [
+  { name: 'Millet (Bajra)', waterReq: 'Low', efficiency: 'High', suitability: 94, yield: '2.1 t/ha', freq: 'Every 12–15 days', profit: 'Moderate' },
+  { name: 'Chickpea (Chana)', waterReq: 'Low', efficiency: 'High', suitability: 89, yield: '1.6 t/ha', freq: 'Every 15–18 days', profit: 'Moderate' },
+  { name: 'Mustard', waterReq: 'Low-Medium', efficiency: 'Medium-High', suitability: 82, yield: '1.8 t/ha', freq: 'Every 10–12 days', profit: 'Good' },
+  { name: 'Wheat', waterReq: 'Medium', efficiency: 'Medium', suitability: 68, yield: '3.4 t/ha', freq: 'Every 8–10 days', profit: 'Good' },
+  { name: 'Sugarcane', waterReq: 'Very High', efficiency: 'Low', suitability: 52, yield: '68 t/ha', freq: 'Every 5–7 days', profit: 'High (water-costly)' },
+  { name: 'Rice (Paddy)', waterReq: 'Very High', efficiency: 'Low', suitability: 41, yield: '3.9 t/ha', freq: 'Continuous flooding', profit: 'High (water-costly)' },
+];
+
+const WATER_QUALITY_PARAMS = [
+  { name: 'pH', value: 7.4, unit: '', safe: [6.5, 8.5], status: 'safe' },
+  { name: 'TDS', value: 890, unit: 'mg/L', safe: [0, 500], status: 'high' },
+  { name: 'EC', value: 1120, unit: 'µS/cm', safe: [0, 750], status: 'high' },
+  { name: 'Hardness', value: 340, unit: 'mg/L', safe: [0, 300], status: 'moderate' },
+  { name: 'Nitrate', value: 38, unit: 'mg/L', safe: [0, 45], status: 'moderate' },
+  { name: 'Fluoride', value: 0.9, unit: 'mg/L', safe: [0, 1.5], status: 'safe' },
+  { name: 'Arsenic', value: 0.008, unit: 'mg/L', safe: [0, 0.01], status: 'safe' },
+  { name: 'Turbidity', value: 3.1, unit: 'NTU', safe: [0, 5], status: 'safe' },
+];
+
+const IOT_SENSORS = [
+  { id: 'GW-014', type: 'Groundwater Sensor', loc: 'Hapur Block A', level: '32.4 m', battery: 78, status: 'online' },
+  { id: 'FM-102', type: 'Flow Meter', loc: 'Ghaziabad Pumping Stn 3', level: '1,240 L/min', battery: 91, status: 'online' },
+  { id: 'RG-041', type: 'Rain Gauge', loc: 'Meerut Sector 7', level: '4.2 mm/hr', battery: 64, status: 'online' },
+  { id: 'WQ-009', type: 'Water Quality Sensor', loc: 'Aligarh Ward 12', level: 'TDS 890 mg/L', battery: 22, status: 'warning' },
+  { id: 'GW-027', type: 'Groundwater Sensor', loc: 'Bulandshahr Block C', level: '20.3 m', battery: 55, status: 'online' },
+  { id: 'FM-058', type: 'Flow Meter', loc: 'Noida Sector 62', level: '—', battery: 0, status: 'offline' },
+  { id: 'RG-019', type: 'Rain Gauge', loc: 'Greater Noida Phase 2', level: '0.0 mm/hr', battery: 88, status: 'online' },
+  { id: 'GW-033', type: 'Groundwater Sensor', loc: 'Mathura Block B', level: '16.5 m', battery: 45, status: 'online' },
+];
+
+const REPORT_TYPES = [
+  'District Water Report', 'Groundwater Report', 'Water Quality Report',
+  'Risk Assessment', 'Recharge Planning Report', 'Annual Water Budget', 'AI Recommendations',
+];
+
+const COST_BENEFIT = [
+  { name: 'Recharge Well', cost: '₹12 lakh', maintenance: '₹40,000/yr', recharge: '8.5 MLD/yr', payback: '3.2 years', impact: 'High' },
+  { name: 'Check Dam', cost: '₹35 lakh', maintenance: '₹1.1 lakh/yr', recharge: '22 MLD/yr', payback: '4.1 years', impact: 'High' },
+  { name: 'Percolation Pond', cost: '₹18 lakh', maintenance: '₹60,000/yr', recharge: '11 MLD/yr', payback: '3.6 years', impact: 'Medium' },
+  { name: 'Rooftop Harvesting (per cluster)', cost: '₹6 lakh', maintenance: '₹15,000/yr', recharge: '3.2 MLD/yr', payback: '2.4 years', impact: 'Medium' },
+];
+
+const AI_QA = [
+  { q: 'Why is groundwater declining in Hapur?', a: 'Hapur shows a depletion rate of 0.8 m/year driven mainly by high agricultural extraction combined with low natural recharge capacity in the block.', data: 'CGWB well data, extraction records', confidence: 91, action: 'Prioritize recharge well construction and regulate peak-season extraction.' },
+  { q: 'Which crops should farmers grow this season?', a: 'Based on current groundwater availability, low-water crops such as Millet and Chickpea show the highest suitability this season.', data: 'Soil, rainfall & groundwater models', confidence: 88, action: 'Promote millet and pulses through subsidy and awareness programs.' },
+  { q: 'Where should recharge wells be constructed?', a: 'The highest-suitability sites are Hapur Block (94%) and Bulandshahr (89%), based on soil permeability, slope and groundwater depth.', data: 'Geospatial ML suitability model', confidence: 90, action: 'Fast-track site surveys for Hapur and Bulandshahr blocks.' },
+  { q: 'How much rainwater can my building harvest?', a: 'For a typical 2,000 sq ft rooftop with 750 mm annual rainfall, estimated harvest is approximately 1.05 million litres per year at a 0.85 runoff coefficient.', data: 'IMD rainfall normals', confidence: 95, action: 'Use the Rainwater Harvesting Calculator for a precise estimate.' },
+  { q: 'Which districts are at critical risk?', a: 'Hapur is currently classified Critical. Noida and Greater Noida are High Risk, while Ghaziabad, Bulandshahr and Aligarh are Moderate.', data: 'Groundwater risk heatmap model', confidence: 93, action: 'Focus monitoring and intervention budget on Hapur first.' },
+];
+
+// ============================================================
+// JalSuraksha — App Logic
+// ============================================================
+let currentPage = 'dashboard';
+let sidebarCollapsed = false;
+let selectedDistrict = DISTRICTS.find(d => d.name === 'Hapur');
+const chartRegistry = {};
+
+function icon(name, cls) { return `<i data-lucide="${name}" class="${cls||''}"></i>`; }
+
+function refreshIcons() { if (window.lucide) lucide.createIcons(); }
+
+function toast(msg, type='info') {
+  const colors = { info: 'bg-navy', success: 'bg-green', error: 'bg-red' };
+  const el = document.createElement('div');
+  el.className = `toast ${colors[type]} text-white text-sm px-4 py-2.5 rounded-lg shadow-xl`;
+  el.textContent = msg;
+  document.getElementById('toastHost').appendChild(el);
+  setTimeout(() => el.remove(), 3100);
+}
+
+// ---------------- Sidebar / Nav ----------------
+function buildNav() {
+  const nav = document.getElementById('navList');
+  nav.innerHTML = NAV_ITEMS.map(item => `
+    <button class="navlink w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-blue-50/90 ${item.id===currentPage?'active text-white':''}" data-nav="${item.id}" onclick="navigate('${item.id}')">
+      ${icon(item.icon, 'w-[18px] h-[18px] flex-shrink-0')}
+      <span class="nav-label">${item.label}</span>
+    </button>`).join('');
+  refreshIcons();
+}
+
+function navigate(pageId) {
+  currentPage = pageId;
+  document.querySelectorAll('.navlink').forEach(b => b.classList.toggle('active', b.dataset.nav === pageId));
+  const item = NAV_ITEMS.find(n => n.id === pageId);
+  document.getElementById('pageBreadcrumb').textContent = item ? item.label : '';
+  renderPage(pageId);
+  closeMobileSidebar();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function toggleSidebar() {
+  if (window.innerWidth < 1024) {
+    document.getElementById('sidebar').classList.toggle('mobile-open');
+    document.getElementById('drawerOverlay').classList.toggle('hidden');
+    return;
+  }
+  sidebarCollapsed = !sidebarCollapsed;
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+  document.getElementById('mainWrap').style.marginLeft = sidebarCollapsed ? '76px' : '260px';
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('drawerOverlay').classList.add('hidden');
+}
+
+function updateDateTime() {
+  const el = document.getElementById('headerDateTime');
+  const now = new Date();
+  const opts = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+  const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  el.textContent = `${now.toLocaleDateString('en-IN', opts)} · ${time}`;
+}
+
+// ---------------- Shared small components ----------------
+function riskTag(risk) {
+  const bg = { safe: 'bg-green/15 text-green', moderate: 'bg-yellow/20 text-[#8a6d1a]', high: 'bg-orange/15 text-orange', critical: 'bg-red/15 text-red' }[risk];
+  return `<span class="tag ${bg}">${RISK_LABELS[risk].toUpperCase()}</span>`;
+}
+function priorityTag(p) {
+  const map = { High: 'bg-red/15 text-red', Medium: 'bg-yellow/20 text-[#8a6d1a]', Low: 'bg-green/15 text-green' };
+  return `<span class="tag ${map[p]}">${p}</span>`;
+}
+function sourceNote(source, updated, confidence) {
+  return `<div class="text-[11px] text-muted mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+    <span>Source: ${source}</span><span>Updated: ${updated}</span><span>Confidence: ${confidence}%</span>
+  </div>`;
+}
+function sectionHeader(title, subtitle, right) {
+  return `<div class="flex items-start justify-between gap-3 mb-4 flex-wrap">
+    <div><h2 class="font-display font-bold text-lg text-navy">${title}</h2>${subtitle?`<p class="text-sm text-muted mt-0.5">${subtitle}</p>`:''}</div>
+    <div>${right||''}</div>
+  </div>`;
+}
+
+// ---------------- Modal helper ----------------
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalHost').classList.remove('hidden');
+  document.getElementById('modalHost').classList.add('flex');
+  refreshIcons();
+}
+function closeModal() {
+  document.getElementById('modalHost').classList.add('hidden');
+  document.getElementById('modalHost').classList.remove('flex');
+}
+
+// ============================================================
+// PAGE ROUTER
+// ============================================================
+function renderPage(id) {
+  const host = document.getElementById('pageHost');
+  const renderers = {
+    dashboard: renderDashboard,
+    groundwater: renderGroundwater,
+    risk: renderRisk,
+    gis: renderGIS,
+    recharge: renderRecharge,
+    harvesting: renderHarvesting,
+    demand: renderDemand,
+    crop: renderCrop,
+    quality: renderQuality,
+    budget: renderBudget,
+    simulator: renderSimulator,
+    costbenefit: renderCostBenefit,
+    iot: renderIoT,
+    reports: renderReports,
+    citizen: renderCitizen,
+    ai: renderAIPage,
+    users: renderUsers,
+    settings: renderSettings,
+  };
+  host.innerHTML = renderers[id] ? '' : `<div class="card p-8 text-center text-muted">Page not found.</div>`;
+  if (renderers[id]) renderers[id](host);
+  refreshIcons();
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard(host) {
+  host.innerHTML = `
+  <section class="relative rounded-card overflow-hidden mb-6" style="min-height:230px;">
+    <img src="https://images.unsplash.com/photo-1500534623283-312aade485b7?w=1600&q=70" class="absolute inset-0 w-full h-full object-cover" />
+    <div class="absolute inset-0" style="background:linear-gradient(100deg, rgba(6,42,77,0.92) 20%, rgba(6,42,77,0.55) 60%, rgba(22,131,216,0.25))"></div>
+    <div class="relative z-10 p-6 lg:p-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div class="max-w-xl">
+        <h1 class="font-display font-extrabold text-white text-2xl lg:text-4xl leading-tight">Water Intelligence<br/>for a Safer Tomorrow</h1>
+        <p class="text-blue-50/90 text-sm lg:text-base mt-3">AI-driven insights for sustainable groundwater and water resource management.</p>
+      </div>
+      <div class="text-right text-blue-50 italic text-sm lg:text-base hidden lg:block">"Every Drop Today<br/>A Brighter Tomorrow"</div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6" id="kpiGrid"></section>
+
+  <section class="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 mb-6">
+    <div class="card p-4 lg:p-5">
+      ${sectionHeader('Groundwater Risk Heatmap', 'Real-time analysis of groundwater levels, risk zones and recharge suitability', `
+        <div class="flex items-center gap-2 flex-wrap">
+          <select class="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white"><option>Uttar Pradesh</option></select>
+          <select id="districtSelect" class="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white" onchange="selectDistrictByName(this.value)">
+            <option value="">Select District</option>
+            ${DISTRICTS.map(d=>`<option value="${d.name}" ${d.name===selectedDistrict.name?'selected':''}>${d.name}</option>`).join('')}
+          </select>
+          <button onclick="openLayersModal()" class="flex items-center gap-1.5 text-sm bg-blueLight text-blue px-3 py-1.5 rounded-lg font-medium">${icon('layers','w-4 h-4')} Layers</button>
+        </div>`)}
+      <div id="mapWrap" class="relative rounded-xl overflow-hidden" style="background:linear-gradient(135deg,#0d3a24,#1c4d2e 45%,#0d3a24); min-height:380px;">
+        <svg id="districtMap" viewBox="0 0 620 460" class="w-full h-full absolute inset-0"></svg>
+        <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          <button onclick="toast('Zoom in — demo only')" class="w-8 h-8 bg-white/90 rounded-lg flex items-center justify-center shadow">${icon('plus','w-4 h-4 text-navy')}</button>
+          <button onclick="toast('Zoom out — demo only')" class="w-8 h-8 bg-white/90 rounded-lg flex items-center justify-center shadow">${icon('minus','w-4 h-4 text-navy')}</button>
+          <button onclick="toast('Recentered map')" class="w-8 h-8 bg-white/90 rounded-lg flex items-center justify-center shadow">${icon('locate-fixed','w-4 h-4 text-navy')}</button>
+        </div>
+        <div class="absolute bottom-3 left-3 bg-navyDark/90 text-white text-xs rounded-lg p-3 space-y-1.5 z-10">
+          ${Object.entries(RISK_LABELS).map(([k,v])=>`<div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${RISK_COLORS[k]}"></span>${v}</div>`).join('')}
+        </div>
+        <div id="districtInfoPanel" class="absolute top-3 right-3 w-64 z-10"></div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div class="card p-4">
+        ${sectionHeader('Quick Actions')}
+        <div class="grid grid-cols-2 gap-3">
+          ${quickActionCard('bar-chart-3','Run Prediction','Groundwater Level',"openPredictionModal()")}
+          ${quickActionCard('map-pin','Find Recharge Sites','AI-based Mapping',"navigate('recharge')")}
+          ${quickActionCard('calculator','Calculate Harvesting','Rainwater Potential',"navigate('harvesting')")}
+          ${quickActionCard('sliders-horizontal','Simulate Scenarios','What-if Analysis',"navigate('simulator')")}
+        </div>
+      </div>
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display font-bold text-navy">Recent Alerts</h3>
+          <button class="text-xs text-blue font-semibold" onclick="openAllAlertsModal()">View All</button>
+        </div>
+        <div class="space-y-3">${ALERTS.slice(0,4).map(alertRow).join('')}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+    <div class="card p-4">
+      ${sectionHeader('Groundwater Level Trend','', `<select id="trendRange" onchange="renderTrendChart()" class="text-xs border border-slate-200 rounded-lg px-2 py-1"><option>5 Years</option><option>10 Years</option><option>20 Years</option></select>`)}
+      <canvas id="trendChart" height="190"></canvas>
+    </div>
+    <div class="card p-4">
+      ${sectionHeader('Water Demand vs Supply','', `<div class="flex gap-1 text-xs">
+        <button class="demandFilterBtn px-2 py-1 rounded-md bg-blue text-white" data-f="all" onclick="setDemandFilter('all')">All</button>
+        <button class="demandFilterBtn px-2 py-1 rounded-md bg-slate-100" data-f="domestic" onclick="setDemandFilter('domestic')">Domestic</button>
+        <button class="demandFilterBtn px-2 py-1 rounded-md bg-slate-100" data-f="agriculture" onclick="setDemandFilter('agriculture')">Agri</button>
+        <button class="demandFilterBtn px-2 py-1 rounded-md bg-slate-100" data-f="industrial" onclick="setDemandFilter('industrial')">Industrial</button>
+      </div>`)}
+      <canvas id="demandChart" height="190"></canvas>
+    </div>
+    <div class="card p-4">
+      ${sectionHeader('Water Budget (Current Year)')}
+      <div class="relative">
+        <canvas id="budgetChart" height="190"></canvas>
+        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style="top:0;bottom:38px;">
+          <div class="text-xl font-extrabold text-red">-${WATER_BUDGET.deficit}</div>
+          <div class="text-[11px] text-muted">MLD</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs mt-2">
+        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue"></span>Rainfall Input: ${WATER_BUDGET.rainfall} MLD</div>
+        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green"></span>Recharge: ${WATER_BUDGET.recharge} MLD</div>
+        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow"></span>Extraction: ${WATER_BUDGET.extraction} MLD</div>
+        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red"></span>Deficit: ${WATER_BUDGET.deficit} MLD</div>
+      </div>
+      <div class="mt-3 bg-red/10 text-red text-xs font-semibold rounded-lg p-2.5 flex items-center gap-2">${icon('triangle-alert','w-4 h-4')} Water Deficit — Recharge interventions required</div>
+    </div>
+  </section>
+
+  <section class="card p-4">
+    ${sectionHeader('AI Recommendations (Top 5)','', `<button class="text-xs text-blue font-semibold" onclick="navigate('recharge')">View All</button>`)}
+    <div class="divide-y divide-slate-100">
+      ${AI_RECOMMENDATIONS.map((r,i)=>`
+        <div class="py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded-lg px-2 -mx-2" onclick='openRecommendationModal(${i})'>
+          <div class="w-7 h-7 rounded-full bg-blueLight text-blue flex items-center justify-center font-bold text-xs flex-shrink-0">${i+1}</div>
+          <div class="flex-1 text-sm font-medium">${r.title}</div>
+          ${priorityTag(r.priority)}
+          <i data-lucide="chevron-right" class="w-4 h-4 text-muted"></i>
+        </div>`).join('')}
+    </div>
+  </section>
+  `;
+
+  renderKPIs();
+  renderDistrictMap();
+  selectDistrict(selectedDistrict, false);
+  renderTrendChart();
+  window._demandFilter = 'all';
+  renderDemandChart();
+  renderBudgetChart();
+  refreshIcons();
+}
+
+function quickActionCard(ic, title, sub, onclick) {
+  return `<button onclick="${onclick}" class="text-left p-3 rounded-xl border border-slate-100 hover:border-blue hover:bg-blueLight transition group">
+    <div class="w-9 h-9 rounded-lg bg-blueLight text-blue flex items-center justify-center mb-2 group-hover:bg-blue group-hover:text-white transition">${icon(ic,'w-[18px] h-[18px]')}</div>
+    <div class="text-sm font-semibold leading-tight">${title}</div>
+    <div class="text-[11px] text-muted">${sub}</div>
+  </button>`;
+}
+
+function alertRow(a) {
+  const conf = { critical: {i:'circle-alert', c:'text-red bg-red/10'}, warning: {i:'triangle-alert', c:'text-orange bg-orange/10'}, info: {i:'info', c:'text-blue bg-blue/10'} }[a.sev];
+  return `<div class="flex items-start gap-2.5">
+    <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${conf.c}">${icon(conf.i,'w-4 h-4')}</div>
+    <div class="flex-1 min-w-0"><div class="text-sm leading-snug">${a.text}</div><div class="text-[11px] text-muted">${a.time}</div></div>
+  </div>`;
+}
+
+function renderKPIs() {
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = KPI_DATA.map((k,i)=>`
+    <div class="card p-4 hoverable">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style="background:${colorBgSoft(k.color)}; color:${colorSolid(k.color)}">${icon(k.icon,'w-[18px] h-[18px]')}</div>
+      <div class="text-[12px] text-muted leading-tight mb-1">${k.label}</div>
+      <div class="kpi-value font-display font-extrabold text-xl lg:text-2xl text-navy" id="kpiVal${i}">0</div>
+      ${k.trend!==null ? `<div class="flex items-center gap-1 mt-1 text-xs font-semibold ${trendColor(k)}">
+          ${icon(k.trendDir==='up'?'arrow-up':'arrow-down','w-3.5 h-3.5')} ${k.trend}%
+        </div>` : `<span class="tag bg-yellow/20 text-[#8a6d1a] mt-1 inline-block">${k.context}</span>`}
+      ${k.trend!==null ? `<div class="text-[11px] text-muted mt-0.5">${k.context}</div>` : ''}
+    </div>`).join('');
+  KPI_DATA.forEach((k,i)=>animateKPI(i,k));
+}
+function colorBgSoft(c){ return {blue:'#EAF5FF',green:'#EAF8EF',red:'#FDECEC',yellow:'#FDF6E3'}[c]; }
+function colorSolid(c){ return {blue:'#1683D8',green:'#27AE60',red:'#EB5757',yellow:'#c99a1f'}[c]; }
+function trendColor(k){ return k.trendGood ? 'text-green' : (k.trendDir==='up' && !k.trendGood ? 'text-orange' : 'text-red'); }
+
+function animateKPI(i, k) {
+  const el = document.getElementById('kpiVal'+i);
+  const target = k.value; const dur = 900; const start = performance.now();
+  function step(t) {
+    const p = Math.min(1, (t-start)/dur);
+    const val = target * (1 - Math.pow(1-p, 3));
+    el.textContent = (Number.isInteger(target) ? Math.round(val) : val.toFixed(1)) + (k.unit ? ' '+k.unit : '');
+    if (p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ---------------- District Map (SVG) ----------------
+function renderDistrictMap() {
+  const svg = document.getElementById('districtMap');
+  svg.innerHTML = DISTRICTS.map(d => `
+    <path class="district-shape ${d.name===selectedDistrict.name?'selected':''}" data-name="${d.name}" d="${d.path}" fill="${RISK_COLORS[d.risk]}" fill-opacity="0.88" onclick="selectDistrictByName('${d.name}')"></path>
+  `).join('') + DISTRICTS.map(d => {
+    const c = pathCentroid(d.path);
+    return `<text x="${c.x}" y="${c.y}" text-anchor="middle" fill="#062A4D" font-size="12" font-weight="600" style="pointer-events:none; paint-order: stroke; stroke: white; stroke-width: 3px;">${d.name}</text>`;
+  }).join('');
+}
+function pathCentroid(path) {
+  const nums = path.match(/-?\d+(\.\d+)?/g).map(Number);
+  let xs=[], ys=[];
+  for (let i=0;i<nums.length;i+=2){ xs.push(nums[i]); ys.push(nums[i+1]); }
+  return { x: xs.reduce((a,b)=>a+b,0)/xs.length, y: ys.reduce((a,b)=>a+b,0)/ys.length };
+}
+function selectDistrictByName(name) {
+  const d = DISTRICTS.find(x=>x.name===name);
+  if (d) selectDistrict(d);
+}
+function selectDistrict(d, updateSelect=true) {
+  selectedDistrict = d;
+  document.querySelectorAll('.district-shape').forEach(p => p.classList.toggle('selected', p.dataset.name===d.name));
+  if (updateSelect) { const sel = document.getElementById('districtSelect'); if (sel) sel.value = d.name; }
+  const panel = document.getElementById('districtInfoPanel');
+  if (!panel) return;
+  panel.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-display font-bold text-navy">${d.name}</h4>
+        ${riskTag(d.risk)}
+      </div>
+      <div class="space-y-1.5 text-sm">
+        <div class="flex justify-between"><span class="text-muted">Current Level</span><span class="font-semibold">${d.level} m</span></div>
+        <div class="flex justify-between"><span class="text-muted">Predicted (1 yr)</span><span class="font-semibold">${d.predicted} m</span></div>
+        <div class="flex justify-between"><span class="text-muted">Depletion Rate</span><span class="font-semibold">${d.depletion} m/year</span></div>
+        <div class="flex justify-between"><span class="text-muted">Recharge Potential</span><span class="font-semibold">${d.recharge} MLD</span></div>
+      </div>
+      <div class="text-xs text-muted mt-2"><span class="font-semibold text-txt">Main Issues:</span> ${d.issues}</div>
+      <div class="text-xs text-muted mt-1"><span class="font-semibold text-txt">Recommended:</span> ${d.recommended}</div>
+      <button onclick="openDistrictDetail('${d.name}')" class="mt-3 w-full bg-blue text-white text-sm font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5">View Detailed Analysis ${icon('arrow-right','w-4 h-4')}</button>
+    </div>`;
+}
+function openDistrictDetail(name) {
+  const d = DISTRICTS.find(x=>x.name===name);
+  openModal(`
+    <div class="p-5">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="font-display font-bold text-lg text-navy">${d.name} — Detailed Analysis</h3>
+        <button onclick="closeModal()">${icon('x','w-5 h-5 text-muted')}</button>
+      </div>
+      ${riskTag(d.risk)}
+      <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
+        <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">Current Level</div><div class="font-bold text-navy text-lg">${d.level} m</div></div>
+        <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">Predicted (1yr)</div><div class="font-bold text-navy text-lg">${d.predicted} m</div></div>
+        <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">Depletion Rate</div><div class="font-bold text-navy text-lg">${d.depletion} m/yr</div></div>
+        <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">Recharge Potential</div><div class="font-bold text-navy text-lg">${d.recharge} MLD</div></div>
+      </div>
+      <div class="mt-4 text-sm"><span class="font-semibold">Main Issues:</span> ${d.issues}</div>
+      <div class="mt-1 text-sm"><span class="font-semibold">Recommended Structures:</span> ${d.recommended}</div>
+      ${sourceNote('Central Ground Water Board (simulated)','2025-09-10',91)}
+      <button onclick="closeModal(); navigate('groundwater');" class="mt-4 w-full bg-navy text-white text-sm font-semibold py-2.5 rounded-lg">Open in Groundwater Analysis</button>
+    </div>`);
+}
+
+function openLayersModal() {
+  const layers = ['Satellite','Terrain','Risk Layer','Groundwater Level','Rainfall','Recharge Suitability','Water Quality'];
+  openModal(`<div class="p-5">
+    <div class="flex items-center justify-between mb-3"><h3 class="font-display font-bold text-lg text-navy">Map Layers</h3><button onclick="closeModal()">${icon('x','w-5 h-5 text-muted')}</button></div>
+    <div class="space-y-2.5">
+      ${layers.map((l,i)=>`<div class="flex items-center justify-between py-1.5">
+        <span class="text-sm">${l}</span>
+        <div class="toggle-switch ${i<3?'on':''}" onclick="this.classList.toggle('on')"><div class="dot"></div></div>
+      </div>`).join('')}
+    </div>
+  </div>`);
+}
+
+function openAllAlertsModal() {
+  openModal(`<div class="p-5">
+    <div class="flex items-center justify-between mb-3"><h3 class="font-display font-bold text-lg text-navy">All Alerts</h3><button onclick="closeModal()">${icon('x','w-5 h-5 text-muted')}</button></div>
+    <div class="space-y-4">${ALERTS.map(alertRow).join('')}</div>
+  </div>`);
+}
+
+function openRecommendationModal(i) {
+  const r = AI_RECOMMENDATIONS[i];
+  openModal(`<div class="p-5">
+    <div class="flex items-center justify-between mb-2"><h3 class="font-display font-bold text-lg text-navy">${r.title}</h3><button onclick="closeModal()">${icon('x','w-5 h-5 text-muted')}</button></div>
+    ${priorityTag(r.priority)}
+    <p class="text-sm text-muted mt-3"><span class="font-semibold text-txt">Problem:</span> ${r.problem}</p>
+    <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">Expected Impact</div><div class="font-bold text-navy">${r.impact}</div></div>
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">Estimated Cost</div><div class="font-bold text-navy">${r.cost}</div></div>
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">Water Saved/Recharged</div><div class="font-bold text-navy">${r.saved}</div></div>
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-muted text-xs">AI Confidence</div><div class="font-bold text-navy">${r.confidence}%</div></div>
+    </div>
+    <button onclick="closeModal(); toast('Added to intervention plan','success')" class="mt-4 w-full bg-blue text-white text-sm font-semibold py-2.5 rounded-lg">Add to Intervention Plan</button>
+  </div>`);
+}
+
+function openPredictionModal() {
+  openModal(`<div class="p-5">
+    <div class="flex items-center justify-between mb-3"><h3 class="font-display font-bold text-lg text-navy">Run Groundwater Prediction</h3><button onclick="closeModal()">${icon('x','w-5 h-5 text-muted')}</button></div>
+    <label class="text-xs text-muted">District</label>
+    <select id="predDistrict" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1 mb-3">${DISTRICTS.map(d=>`<option ${d.name===selectedDistrict.name?'selected':''}>${d.name}</option>`).join('')}</select>
+    <label class="text-xs text-muted">Forecast Horizon</label>
+    <select id="predHorizon" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1 mb-4">
+      <option>1 Year</option><option>5 Years</option><option>10 Years</option>
+    </select>
+    <button onclick="runPrediction()" class="w-full bg-blue text-white text-sm font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2">${icon('bar-chart-3','w-4 h-4')} Run Prediction</button>
+    <div id="predResult" class="mt-4"></div>
+  </div>`);
+}
+function runPrediction() {
+  const dName = document.getElementById('predDistrict').value;
+  const horizon = document.getElementById('predHorizon').value;
+  const d = DISTRICTS.find(x=>x.name===dName);
+  const yrs = horizon==='1 Year'?1:(horizon==='5 Years'?5:10);
+  const predicted = (d.level + d.depletion*yrs).toFixed(1);
+  document.getElementById('predResult').innerHTML = `
+    <div class="bg-blueLight rounded-lg p-4 text-sm">
+      <div class="flex justify-between mb-1"><span class="text-muted">Current Level</span><span class="font-bold">${d.level} m</span></div>
+      <div class="flex justify-between mb-1"><span class="text-muted">Predicted in ${horizon}</span><span class="font-bold text-blue">${predicted} m</span></div>
+      <div class="flex justify-between"><span class="text-muted">Model Confidence</span><span class="font-bold">${(88 - yrs).toFixed(0)}%</span></div>
+    </div>`;
+}
+
+// ---------------- Charts ----------------
+function destroyChart(id){ if(chartRegistry[id]){ chartRegistry[id].destroy(); delete chartRegistry[id]; } }
+
+function renderTrendChart() {
+  const rangeSel = document.getElementById('trendRange');
+  const range = rangeSel ? rangeSel.value : '5 Years';
+  let labels, actual, predicted;
+  if (range === '5 Years') {
+    labels = GW_TREND.years; actual = GW_TREND.actual; predicted = [null,null,null,null,GW_TREND.actual[4], GW_TREND.actual[5]];
+  } else {
+    labels = GW_TREND.predicted10;
+    actual = [GW_TREND.actual[5], null,null,null,null,null,null,null,null,null,null];
+    predicted = GW_TREND.predictedVals10;
+    if (range === '20 Years') { labels = labels.concat([2036,2037,2038,2039,2040]); predicted = predicted.concat([35.2,35.6,35.9,36.1,36.3]); actual = actual.concat([null,null,null,null,null]); }
+  }
+  destroyChart('trend');
+  const ctx = document.getElementById('trendChart');
+  chartRegistry['trend'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Actual Level', data: actual, borderColor: '#1683D8', backgroundColor:'#1683D8', spanGaps:false, tension:.35, pointRadius:4 },
+      { label: 'Predicted Level', data: predicted, borderColor: '#27AE60', backgroundColor:'#27AE60', borderDash:[6,4], spanGaps:true, tension:.35, pointRadius:4 },
+    ]},
+    options: { responsive:true, plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}},
+      tooltip:{ callbacks:{ label: (c)=> `${c.dataset.label}: ${c.parsed.y} m depth · confidence ${Math.max(60, 95-c.dataIndex*3)}%` } } },
+      scales:{ y:{ reverse:true, title:{display:true,text:'Depth (m)'} } } }
+  });
+}
+
+function setDemandFilter(f) {
+  window._demandFilter = f;
+  document.querySelectorAll('.demandFilterBtn').forEach(b=>b.classList.toggle('bg-blue', b.dataset.f===f) & b.classList.toggle('text-white', b.dataset.f===f) & b.classList.toggle('bg-slate-100', b.dataset.f!==f));
+  renderDemandChart();
+}
+function renderDemandChart() {
+  const mult = { all:1, domestic:0.4, agriculture:0.42, industrial:0.18 }[window._demandFilter||'all'];
+  destroyChart('demand');
+  chartRegistry['demand'] = new Chart(document.getElementById('demandChart'), {
+    type:'bar',
+    data:{ labels: DEMAND_SUPPLY.years, datasets:[
+      { label:'Water Demand', data: DEMAND_SUPPLY.demand.map(v=>Math.round(v*mult)), backgroundColor:'#1683D8', borderRadius:6 },
+      { label:'Natural Recharge', data: DEMAND_SUPPLY.recharge.map(v=>Math.round(v*mult)), backgroundColor:'#27AE60', borderRadius:6 },
+    ]},
+    options:{ responsive:true, plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}}, scales:{y:{title:{display:true,text:'Volume (MLD)'}}} }
+  });
+}
+
+function renderBudgetChart() {
+  destroyChart('budget');
+  chartRegistry['budget'] = new Chart(document.getElementById('budgetChart'), {
+    type:'doughnut',
+    data:{ labels:['Rainfall Input','Natural Recharge','Extraction','Net Deficit'],
+      datasets:[{ data:[WATER_BUDGET.rainfall, WATER_BUDGET.recharge, WATER_BUDGET.extraction, WATER_BUDGET.deficit], backgroundColor:['#1683D8','#27AE60','#F2C94C','#EB5757'], borderWidth:0 }]},
+    options:{ cutout:'70%', plugins:{legend:{display:false}} }
+  });
+}
+
+// ---------------- Init ----------------
+document.addEventListener('DOMContentLoaded', () => {
+  buildNav();
+  updateDateTime();
+  setInterval(updateDateTime, 30000);
+  navigate('dashboard');
+  refreshIcons();
+});
+
+// ============================================================
+// Additional Pages — Part 1
+// ============================================================
+
+function filterBar(fields) {
+  return `<div class="flex flex-wrap gap-2 mb-4">${fields.map(f=>`
+    <select class="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white">${f.opts.map(o=>`<option>${o}</option>`).join('')}</select>`).join('')}</div>`;
+}
+
+// ---------------- Groundwater Analysis ----------------
+function renderGroundwater(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5 mb-4">
+    ${sectionHeader('Groundwater Analysis','District, block and village-level groundwater intelligence')}
+    ${filterBar([
+      {opts:['Uttar Pradesh']}, {opts:DISTRICTS.map(d=>d.name)}, {opts:['All Blocks','Block A','Block B','Block C']},
+      {opts:['All Villages']}, {opts:['2025','2024','2023']}, {opts:['Annual','Monsoon','Post-Monsoon','Summer']}
+    ])}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      ${metricTile('Groundwater Depth','24.8 m','blue')}
+      ${metricTile('Extraction Rate','482 MLD','orange')}
+      ${metricTile('Recharge Rate','310 MLD','green')}
+      ${metricTile('Seasonal Variation','±3.2 m','yellow')}
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div>
+        <h3 class="font-semibold text-sm mb-2">Historical Comparison</h3>
+        <canvas id="gwHistChart" height="180"></canvas>
+      </div>
+      <div>
+        <h3 class="font-semibold text-sm mb-2">AI Forecast</h3>
+        <div class="bg-blueLight rounded-xl p-4 space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-muted">Current</span><span class="font-bold">24.8 m</span></div>
+          <div class="flex justify-between"><span class="text-muted">2030 Prediction</span><span class="font-bold text-blue">29.6 m</span></div>
+          <div class="flex justify-between"><span class="text-muted">2035 Prediction</span><span class="font-bold text-blue">34.8 m</span></div>
+          <div class="flex justify-between"><span class="text-muted">Risk</span>${riskTag('high')}</div>
+          <div class="flex justify-between"><span class="text-muted">Confidence</span><span class="font-bold">87%</span></div>
+        </div>
+        ${sourceNote('CGWB + ML Forecast Model','2025-09-10',87)}
+      </div>
+    </div>
+  </div>
+  <div class="card p-4 lg:p-5">
+    <h3 class="font-display font-bold text-navy mb-3">District Comparison</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-muted border-b border-slate-100"><th class="py-2 pr-4">District</th><th class="py-2 pr-4">Current Level</th><th class="py-2 pr-4">Depletion Rate</th><th class="py-2 pr-4">Recharge Potential</th><th class="py-2">Status</th></tr></thead>
+        <tbody>${DISTRICTS.map(d=>`<tr class="border-b border-slate-50">
+          <td class="py-2 pr-4 font-medium">${d.name}</td><td class="py-2 pr-4">${d.level} m</td><td class="py-2 pr-4">${d.depletion} m/yr</td><td class="py-2 pr-4">${d.recharge} MLD</td><td class="py-2">${riskTag(d.risk)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+  </div>`;
+  destroyChart('gwHist');
+  chartRegistry['gwHist'] = new Chart(document.getElementById('gwHistChart'), {
+    type:'line', data:{ labels:GW_TREND.years, datasets:[{ label:'Depth (m)', data:GW_TREND.actual, borderColor:'#1683D8', backgroundColor:'rgba(22,131,216,0.1)', fill:true, tension:.35 }]},
+    options:{ plugins:{legend:{display:false}}, scales:{y:{reverse:true}} }
+  });
+}
+function metricTile(label, value, color) {
+  return `<div class="rounded-xl p-3.5" style="background:${colorBgSoft(color)}"><div class="text-xs text-muted">${label}</div><div class="font-display font-bold text-lg mt-0.5" style="color:${colorSolid(color)}">${value}</div></div>`;
+}
+
+// ---------------- Risk & Forecasting ----------------
+function renderRisk(host) {
+  const factors = [ {l:'Groundwater depletion', v:34, c:'#EB5757'}, {l:'Rainfall deficit', v:22, c:'#F2994A'}, {l:'Extraction intensity', v:27, c:'#F2C94C'}, {l:'Recharge capacity', v:17, c:'#27AE60'} ];
+  const horizons = [ {t:'30 days', score:64}, {t:'6 months', score:69}, {t:'1 year', score:74}, {t:'5 years', score:83}, {t:'10 years', score:91} ];
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5 mb-4">
+    ${sectionHeader('Risk & Forecasting','ML-based groundwater risk scoring and explanation')}
+    <div class="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+      <div class="text-center">
+        <div class="relative w-40 h-40 mx-auto">
+          <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" stroke-width="3"></path>
+            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#F2994A" stroke-width="3" stroke-dasharray="74,100"></path>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div class="font-display font-extrabold text-3xl text-navy">74</div>
+            <div class="text-[11px] text-muted">Risk Score /100</div>
+          </div>
+        </div>
+        <div class="mt-3">${riskTag('high')}</div>
+      </div>
+      <div>
+        <h3 class="font-semibold text-sm mb-3">Risk Factor Breakdown</h3>
+        <div class="space-y-3">
+          ${factors.map(f=>`<div>
+            <div class="flex justify-between text-sm mb-1"><span>${f.l}</span><span class="font-semibold">${f.v}%</span></div>
+            <div class="h-2 rounded-full bg-slate-100"><div class="h-2 rounded-full" style="width:${f.v}%; background:${f.c}"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card p-4 lg:p-5">
+    <h3 class="font-display font-bold text-navy mb-3">Predicted Risk Over Time</h3>
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      ${horizons.map(h=>`<div class="rounded-xl border border-slate-100 p-3 text-center">
+        <div class="text-xs text-muted mb-1">${h.t}</div>
+        <div class="font-display font-bold text-xl text-navy">${h.score}</div>
+        ${riskTag(h.score<50?'safe':h.score<70?'moderate':h.score<85?'high':'critical')}
+      </div>`).join('')}
+    </div>
+    ${sourceNote('Random Forest + Time-Series Ensemble','2025-09-10',87)}
+  </div>`;
+}
+
+// ---------------- GIS & Mapping ----------------
+function renderGIS(host) {
+  const layers = ['Groundwater','Rainfall','Soil','Land Use','Water Bodies','Rivers','Canals','Agriculture','Population','Water Quality','Recharge Potential'];
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5">
+    ${sectionHeader('GIS & Mapping','Advanced multi-layer geospatial intelligence')}
+    <div class="relative mb-2">
+      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted"></i>
+      <input placeholder="Search location..." class="w-full max-w-sm bg-slate-100 rounded-full pl-9 pr-4 py-2 text-sm outline-none mb-3" />
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4">
+      <div class="space-y-1.5">
+        <div class="text-xs font-semibold text-muted mb-1">LAYERS</div>
+        ${layers.map((l,i)=>`<div class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
+          <span class="text-sm">${l}</span><div class="toggle-switch ${i<3?'on':''}" onclick="this.classList.toggle('on')"><div class="dot"></div></div>
+        </div>`).join('')}
+      </div>
+      <div class="relative rounded-xl overflow-hidden" style="background:linear-gradient(135deg,#0d3a24,#1c4d2e 45%,#0d3a24); min-height:420px;">
+        <svg viewBox="0 0 620 460" class="w-full h-full absolute inset-0">
+          ${DISTRICTS.map(d=>`<path d="${d.path}" fill="${RISK_COLORS[d.risk]}" fill-opacity="0.85" stroke="#fff" stroke-width="1.5"></path>`).join('')}
+        </svg>
+        <div class="absolute bottom-3 left-3 bg-navyDark/90 text-white text-xs rounded-lg p-3 space-y-1.5 z-10">
+          ${Object.entries(RISK_LABELS).map(([k,v])=>`<div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${RISK_COLORS[k]}"></span>${v}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------------- Recharge Planning ----------------
+function renderRecharge(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5 mb-4">
+    ${sectionHeader('Recharge Planning','AI-based recharge site selection using multi-factor suitability modeling')}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-2">
+      ${['Rainfall','Soil Type','Slope','Groundwater Depth','Land Availability','Drainage Density','Water Bodies','Population'].map(f=>`
+        <div class="flex items-center gap-2 text-sm bg-slate-50 rounded-lg px-3 py-2"><span class="w-2 h-2 rounded-full bg-blue"></span>${f}</div>`).join('')}
+    </div>
+    <button onclick="toast('Recomputed recharge suitability model','success')" class="mt-3 bg-blue text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 w-fit">${icon('refresh-cw','w-4 h-4')} Recompute Suitability</button>
+  </div>
+  <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
+    <div class="card p-4">
+      <h3 class="font-display font-bold text-navy mb-3">Recommended Recharge Sites — Map</h3>
+      <div class="relative rounded-xl overflow-hidden" style="background:linear-gradient(135deg,#0d3a24,#1c4d2e 45%,#0d3a24); min-height:400px;">
+        <svg viewBox="0 0 620 460" class="w-full h-full absolute inset-0">
+          ${DISTRICTS.map(d=>`<path d="${d.path}" fill="#2b5d3d" stroke="#fff" stroke-width="1"></path>`).join('')}
+          ${RECHARGE_SITES.map((s,i)=>`<g>
+            <circle cx="${s.x}" cy="${s.y}" r="10" fill="#1683D8" stroke="#fff" stroke-width="2"/>
+            <text x="${s.x}" y="${s.y+4}" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">${i+1}</text>
+          </g>`).join('')}
+        </svg>
+      </div>
+    </div>
+    <div class="card p-4">
+      <h3 class="font-display font-bold text-navy mb-3">Recommended Sites</h3>
+      <div class="space-y-3">
+        ${RECHARGE_SITES.map((s,i)=>`<div class="rounded-xl border border-slate-100 p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-semibold text-sm">Site #${i+1} — ${s.site}</span>
+            <span class="text-xs font-bold text-blue">${s.suitability}%</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-slate-100 mb-2"><div class="h-1.5 rounded-full bg-blue" style="width:${s.suitability}%"></div></div>
+          <div class="text-xs text-muted">Recommended structure: <span class="font-medium text-txt">${s.structure}</span></div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------------- Rainwater Harvesting Calculator ----------------
+function renderHarvesting(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5 mb-4">
+    ${sectionHeader('Rainwater Harvesting Calculator','Estimate harvestable rainwater, storage needs and recharge potential')}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="space-y-3">
+        <div><label class="text-xs text-muted">Roof Area (sq ft)</label><input id="rwRoof" type="number" value="2000" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1" oninput="calcHarvesting()"/></div>
+        <div><label class="text-xs text-muted">Annual Rainfall (mm)</label><input id="rwRain" type="number" value="750" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1" oninput="calcHarvesting()"/></div>
+        <div><label class="text-xs text-muted">Runoff Coefficient</label><input id="rwRunoff" type="number" step="0.05" value="0.85" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1" oninput="calcHarvesting()"/></div>
+        <div><label class="text-xs text-muted">Number of Buildings</label><input id="rwBuildings" type="number" value="1" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1" oninput="calcHarvesting()"/></div>
+      </div>
+      <div id="rwResult" class="bg-blueLight rounded-xl p-5"></div>
+    </div>
+  </div>`;
+  calcHarvesting();
+}
+function calcHarvesting() {
+  const roof = parseFloat(document.getElementById('rwRoof').value)||0;
+  const rain = parseFloat(document.getElementById('rwRain').value)||0;
+  const runoff = parseFloat(document.getElementById('rwRunoff').value)||0;
+  const buildings = parseFloat(document.getElementById('rwBuildings').value)||1;
+  const roofM2 = roof * 0.0929;
+  const litresPerBuilding = roofM2 * (rain/1000) * runoff * 1000;
+  const totalLitres = litresPerBuilding * buildings;
+  const totalML = totalLitres/1000000;
+  const storage = totalLitres * 0.15;
+  const recharge = totalLitres * 0.4;
+  const savings = (totalLitres/1000) * 0.05;
+  document.getElementById('rwResult').innerHTML = `
+    <div class="text-xs text-muted mb-1">Estimated Annual Harvest</div>
+    <div class="font-display font-extrabold text-2xl text-blue mb-3">~${totalML.toFixed(2)} million litres/year</div>
+    <div class="space-y-2 text-sm">
+      <div class="flex justify-between"><span class="text-muted">Recommended Storage Capacity</span><span class="font-semibold">${Math.round(storage).toLocaleString()} L</span></div>
+      <div class="flex justify-between"><span class="text-muted">Potential Groundwater Recharge</span><span class="font-semibold">${Math.round(recharge).toLocaleString()} L</span></div>
+      <div class="flex justify-between"><span class="text-muted">Est. Water Bill Savings</span><span class="font-semibold">₹${Math.round(savings).toLocaleString()}/year</span></div>
+    </div>
+    ${sourceNote('IMD Rainfall Normals (simulated)','2025-09-10',95)}
+  `;
+}
+
+// ---------------- Water Demand ----------------
+function renderDemand(host) {
+  const cats = [
+    { name:'Domestic', current:180, projected:210, supply:170 },
+    { name:'Agriculture', current:220, projected:245, supply:190 },
+    { name:'Industrial', current:60, projected:78, supply:55 },
+    { name:'Commercial', current:22, projected:29, supply:20 },
+  ];
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5 mb-4">
+    ${sectionHeader('Water Demand','Sector-wise demand, supply and projected deficit')}
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+      ${cats.map(c=>`<div class="rounded-xl border border-slate-100 p-3.5">
+        <div class="font-semibold text-sm mb-2">${c.name}</div>
+        <div class="text-xs text-muted flex justify-between"><span>Current</span><span class="font-semibold text-txt">${c.current} MLD</span></div>
+        <div class="text-xs text-muted flex justify-between"><span>Projected (2030)</span><span class="font-semibold text-txt">${c.projected} MLD</span></div>
+        <div class="text-xs text-muted flex justify-between"><span>Supply</span><span class="font-semibold text-txt">${c.supply} MLD</span></div>
+        <div class="text-xs flex justify-between mt-1 pt-1 border-t border-slate-100"><span class="text-red font-semibold">Deficit</span><span class="font-bold text-red">${c.projected-c.supply} MLD</span></div>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div class="card p-4 lg:p-5 mb-4">
+    <h3 class="font-display font-bold text-navy mb-3">Adjust Assumptions</h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div><label class="text-xs text-muted flex justify-between">Population Growth Rate <span id="popGrowthVal">2.1%</span></label><input type="range" min="0" max="5" step="0.1" value="2.1" class="w-full" oninput="document.getElementById('popGrowthVal').textContent=this.value+'%'"/></div>
+      <div><label class="text-xs text-muted flex justify-between">Industrial Expansion <span id="indGrowthVal">4.0%</span></label><input type="range" min="0" max="10" step="0.5" value="4" class="w-full" oninput="document.getElementById('indGrowthVal').textContent=this.value+'%'"/></div>
+    </div>
+  </div>
+  <div class="card p-4 lg:p-5">
+    <h3 class="font-display font-bold text-navy mb-3">Demand vs Supply Projection</h3>
+    <canvas id="demandProjChart" height="180"></canvas>
+  </div>`;
+  destroyChart('demandProj');
+  chartRegistry['demandProj'] = new Chart(document.getElementById('demandProjChart'), {
+    type:'bar', data:{ labels: DEMAND_SUPPLY.years, datasets:[
+      { label:'Demand', data: DEMAND_SUPPLY.demand, backgroundColor:'#1683D8', borderRadius:6 },
+      { label:'Supply/Recharge', data: DEMAND_SUPPLY.recharge, backgroundColor:'#27AE60', borderRadius:6 },
+    ]}, options:{ plugins:{legend:{position:'bottom'}} }
+  });
+}
+
+// ---------------- Crop & Irrigation ----------------
+function renderCrop(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5 mb-4">
+    ${sectionHeader('Crop & Irrigation','AI-driven crop-water recommendation system')}
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-2.5 mb-2">
+      <select class="text-sm border border-slate-200 rounded-lg px-2 py-1.5">${DISTRICTS.map(d=>`<option>${d.name}</option>`)}</select>
+      <select class="text-sm border border-slate-200 rounded-lg px-2 py-1.5"><option>Loamy</option><option>Sandy</option><option>Clay</option></select>
+      <select class="text-sm border border-slate-200 rounded-lg px-2 py-1.5"><option>Rabi</option><option>Kharif</option><option>Zaid</option></select>
+      <select class="text-sm border border-slate-200 rounded-lg px-2 py-1.5"><option>28°C</option><option>32°C</option><option>36°C</option></select>
+      <select class="text-sm border border-slate-200 rounded-lg px-2 py-1.5"><option>Normal Rainfall</option><option>Deficit</option><option>Surplus</option></select>
+      <select class="text-sm border border-slate-200 rounded-lg px-2 py-1.5"><option>Moderate GW</option><option>Low GW</option><option>High GW</option></select>
+    </div>
+  </div>
+  <div class="card p-4 lg:p-5">
+    <h3 class="font-display font-bold text-navy mb-3">Recommended Crops</h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      ${CROPS.map(c=>`<div class="rounded-xl border border-slate-100 p-3.5">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="font-semibold text-sm">${c.name}</span>
+          <span class="tag ${c.suitability>=80?'bg-green/15 text-green':c.suitability>=60?'bg-yellow/20 text-[#8a6d1a]':'bg-red/15 text-red'}">${c.suitability}% suitable</span>
+        </div>
+        <div class="grid grid-cols-2 gap-y-1 text-xs text-muted">
+          <div>Water requirement: <span class="text-txt font-medium">${c.waterReq}</span></div>
+          <div>Water efficiency: <span class="text-txt font-medium">${c.efficiency}</span></div>
+          <div>Expected yield: <span class="text-txt font-medium">${c.yield}</span></div>
+          <div>Irrigation: <span class="text-txt font-medium">${c.freq}</span></div>
+        </div>
+        <div class="h-1.5 rounded-full bg-slate-100 mt-2"><div class="h-1.5 rounded-full" style="width:${c.suitability}%; background:${c.suitability>=80?'#27AE60':c.suitability>=60?'#F2C94C':'#EB5757'}"></div></div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ---------------- Water Quality ----------------
+function renderQuality(host) {
+  host.innerHTML = `
+  <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4 mb-4">
+    <div class="card p-5 flex flex-col items-center justify-center">
+      <div class="relative w-32 h-32">
+        <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" stroke-width="3"></path>
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#27AE60" stroke-width="3" stroke-dasharray="87,100"></path>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <div class="font-display font-extrabold text-2xl text-navy">87</div>
+          <div class="text-[10px] text-muted">/100</div>
+        </div>
+      </div>
+      <div class="text-sm font-semibold mt-2">Water Quality Score</div>
+    </div>
+    <div class="card p-4 lg:p-5">
+      ${sectionHeader('Water Quality Parameters')}
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        ${WATER_QUALITY_PARAMS.map(p=>`<div class="rounded-xl border border-slate-100 p-3">
+          <div class="text-xs text-muted">${p.name}</div>
+          <div class="font-display font-bold text-lg" style="color:${p.status==='safe'?'#27AE60':p.status==='moderate'?'#c99a1f':'#EB5757'}">${p.value}<span class="text-xs text-muted"> ${p.unit}</span></div>
+          <div class="tag ${p.status==='safe'?'bg-green/15 text-green':p.status==='moderate'?'bg-yellow/20 text-[#8a6d1a]':'bg-red/15 text-red'} inline-block mt-1">${p.status}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+  <div class="card p-4 lg:p-5">
+    <h3 class="font-display font-bold text-navy mb-3">Water Quality Risk Map</h3>
+    <div class="relative rounded-xl overflow-hidden" style="background:linear-gradient(135deg,#0d3a24,#1c4d2e 45%,#0d3a24); min-height:340px;">
+      <svg viewBox="0 0 620 460" class="w-full h-full absolute inset-0">
+        ${DISTRICTS.map(d=>`<path d="${d.path}" fill="${d.name==='Aligarh'?'#EB5757':(d.name==='Hapur'?'#F2994A':'#27AE60')}" fill-opacity="0.85" stroke="#fff" stroke-width="1.5"></path>`).join('')}
+      </svg>
+    </div>
+    <div class="bg-red/10 text-red text-sm font-medium rounded-lg p-3 mt-3 flex items-center gap-2">${icon('triangle-alert','w-4 h-4')} Alert: High TDS (890 mg/L) detected in Aligarh — exceeds safe threshold of 500 mg/L</div>
+  </div>`;
+}
+
+// ---------------- Water Budget ----------------
+function renderBudget(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5 mb-4">
+    ${sectionHeader('Water Budget','Annual water balance across the state')}
+    <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-center">
+      <div class="relative">
+        <canvas id="budgetChart2" height="220"></canvas>
+        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style="bottom:38px;">
+          <div class="text-2xl font-extrabold text-red">-${WATER_BUDGET.deficit}</div>
+          <div class="text-xs text-muted">MLD</div>
+        </div>
+      </div>
+      <div class="space-y-3">
+        ${[['Total Rainfall Input',WATER_BUDGET.rainfall,'#1683D8'],['Natural Recharge',WATER_BUDGET.recharge,'#27AE60'],['Extraction',WATER_BUDGET.extraction,'#F2C94C'],['Net Deficit',WATER_BUDGET.deficit,'#EB5757']].map(([l,v,c])=>`
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div class="flex items-center gap-2 text-sm"><span class="w-2.5 h-2.5 rounded-full" style="background:${c}"></span>${l}</div>
+            <span class="font-bold">${v} MLD</span>
+          </div>`).join('')}
+        <div class="bg-red/10 text-red text-sm font-semibold rounded-lg p-3 flex items-center gap-2">${icon('triangle-alert','w-4 h-4')} Water Deficit — Recharge interventions required</div>
+      </div>
+    </div>
+  </div>`;
+  destroyChart('budget2');
+  chartRegistry['budget2'] = new Chart(document.getElementById('budgetChart2'), {
+    type:'doughnut', data:{ labels:['Rainfall','Recharge','Extraction','Deficit'], datasets:[{ data:[WATER_BUDGET.rainfall,WATER_BUDGET.recharge,WATER_BUDGET.extraction,WATER_BUDGET.deficit], backgroundColor:['#1683D8','#27AE60','#F2C94C','#EB5757'], borderWidth:0 }]},
+    options:{ cutout:'70%', plugins:{legend:{display:false}} }
+  });
+}
+
+// ============================================================
+// Additional Pages — Part 2 + AI Chat Widget
+// ============================================================
+
+// ---------------- What-If Simulator ----------------
+function renderSimulator(host) {
+  host.innerHTML = `
+  <div class="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-4">
+    <div class="card p-4 lg:p-5">
+      ${sectionHeader('What happens if...','Adjust the sliders to simulate future scenarios')}
+      <div class="space-y-4">
+        ${simSlider('simExtraction','Groundwater Extraction',-50,50,-20,'%')}
+        ${simSlider('simRainfall','Rainfall',-30,30,10,'%')}
+        ${simSlider('simPopulation','Population',0,20,5,'%')}
+        ${simSlider('simAgri','Agricultural Demand',-30,30,0,'%')}
+        ${simSlider('simIndustrial','Industrial Demand',-30,30,0,'%')}
+        ${simSlider('simRecharge','Recharge Structures',0,100,25,'%')}
+      </div>
+      <button onclick="runSimulation()" class="mt-5 w-full bg-blue text-white text-sm font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2">${icon('play','w-4 h-4')} Run Simulation</button>
+    </div>
+    <div class="space-y-4">
+      <div class="card p-4 lg:p-5">
+        <h3 class="font-display font-bold text-navy mb-3">Simulated Outcome</h3>
+        <div id="simOutcome" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+      </div>
+      <div class="card p-4 lg:p-5">
+        <h3 class="font-display font-bold text-navy mb-3">Before vs After — Groundwater Level</h3>
+        <canvas id="simChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>`;
+  runSimulation();
+}
+function simSlider(id, label, min, max, val, unit) {
+  return `<div>
+    <label class="text-xs text-muted flex justify-between mb-1">${label} <span id="${id}Val" class="font-semibold text-txt">${val>0?'+':''}${val}${unit}</span></label>
+    <input type="range" id="${id}" min="${min}" max="${max}" value="${val}" class="w-full" oninput="document.getElementById('${id}Val').textContent=(this.value>0?'+':'')+this.value+'${unit}'"/>
+  </div>`;
+}
+function runSimulation() {
+  const extraction = +document.getElementById('simExtraction').value;
+  const rainfall = +document.getElementById('simRainfall').value;
+  const population = +document.getElementById('simPopulation').value;
+  const agri = +document.getElementById('simAgri').value;
+  const industrial = +document.getElementById('simIndustrial').value;
+  const recharge = +document.getElementById('simRecharge').value;
+
+  const levelImprove = (-extraction*0.03) + (rainfall*0.02) + (recharge*0.025) - (population*0.01) - (agri*0.01) - (industrial*0.008);
+  const newLevel = (24.8 - levelImprove).toFixed(1);
+  const deficitChange = Math.round((-recharge*0.6) + (extraction*0.9) - (rainfall*0.4) + (agri*0.3) + (industrial*0.2));
+  const newSecurity = Math.max(0, Math.min(100, Math.round(68 + levelImprove*4 - deficitChange*0.15)));
+  const criticalBefore = 12;
+  const criticalAfter = Math.max(0, Math.round(12 - levelImprove*2 + deficitChange*0.05));
+
+  document.getElementById('simOutcome').innerHTML = `
+    ${outcomeTile('Groundwater Level', `${levelImprove>=0?'Improves':'Worsens'} by ${Math.abs(levelImprove).toFixed(1)} m`, levelImprove>=0?'green':'red')}
+    ${outcomeTile('Water Deficit', `${deficitChange<=0?'':'+'}${deficitChange}%`, deficitChange<=0?'green':'red')}
+    ${outcomeTile('Water Security', `68 → ${newSecurity}`, newSecurity>=68?'green':'red')}
+    ${outcomeTile('Critical Areas', `12 → ${criticalAfter}`, criticalAfter<=12?'green':'red')}
+  `;
+  destroyChart('sim');
+  chartRegistry['sim'] = new Chart(document.getElementById('simChart'), {
+    type:'line',
+    data:{ labels:['2025','2026','2027','2028','2029','2030'],
+      datasets:[
+        { label:'Baseline', data:[24.8,25.9,27.0,28.1,29.6,30.8], borderColor:'#94a3b8', borderDash:[5,4], tension:.3 },
+        { label:'Simulated Scenario', data:[24.8, +(24.8-levelImprove*0.2).toFixed(1), +(24.8-levelImprove*0.4).toFixed(1), +(24.8-levelImprove*0.6).toFixed(1), +(24.8-levelImprove*0.8).toFixed(1), +newLevel], borderColor:'#1683D8', backgroundColor:'rgba(22,131,216,0.08)', fill:true, tension:.3 },
+      ]},
+    options:{ plugins:{legend:{position:'bottom'}}, scales:{y:{reverse:true, title:{display:true,text:'Depth (m)'}}} }
+  });
+}
+function outcomeTile(label, value, color) {
+  return `<div class="rounded-xl p-3.5" style="background:${colorBgSoft(color)}"><div class="text-xs text-muted">${label}</div><div class="font-display font-bold text-base mt-0.5" style="color:${colorSolid(color)}">${value}</div></div>`;
+}
+
+// ---------------- Cost-Benefit Analysis ----------------
+function renderCostBenefit(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5">
+    ${sectionHeader('Cost-Benefit Analysis','Compare intervention economics across structure types')}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-muted border-b border-slate-100">
+          <th class="py-2 pr-4">Intervention</th><th class="py-2 pr-4">Construction Cost</th><th class="py-2 pr-4">Maintenance</th><th class="py-2 pr-4">Annual Recharge</th><th class="py-2 pr-4">Payback Period</th><th class="py-2">Impact</th>
+        </tr></thead>
+        <tbody>${COST_BENEFIT.map(c=>`<tr class="border-b border-slate-50">
+          <td class="py-2.5 pr-4 font-medium">${c.name}</td>
+          <td class="py-2.5 pr-4">${c.cost}</td>
+          <td class="py-2.5 pr-4">${c.maintenance}</td>
+          <td class="py-2.5 pr-4">${c.recharge}</td>
+          <td class="py-2.5 pr-4">${c.payback}</td>
+          <td class="py-2.5">${priorityTag(c.impact==='High'?'High':'Medium')}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    ${sourceNote('Public Works Dept. cost schedules (simulated)','2025-08-20',82)}
+  </div>
+  <div class="card p-4 lg:p-5 mt-4">
+    <h3 class="font-display font-bold text-navy mb-3">ROI Comparison</h3>
+    <canvas id="roiChart" height="150"></canvas>
+  </div>`;
+  destroyChart('roi');
+  chartRegistry['roi'] = new Chart(document.getElementById('roiChart'), {
+    type:'bar', data:{ labels: COST_BENEFIT.map(c=>c.name), datasets:[{ label:'Annual Recharge (MLD)', data:COST_BENEFIT.map(c=>parseFloat(c.recharge)), backgroundColor:'#1683D8', borderRadius:6 }] },
+    options:{ plugins:{legend:{display:false}}, indexAxis:'y' }
+  });
+}
+
+// ---------------- IoT Monitoring ----------------
+let iotInterval = null;
+function renderIoT(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5">
+    ${sectionHeader('IoT Monitoring','Simulated real-time sensor network')}
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      ${statChip('Online', IOT_SENSORS.filter(s=>s.status==='online').length, 'green')}
+      ${statChip('Warning', IOT_SENSORS.filter(s=>s.status==='warning').length, 'yellow')}
+      ${statChip('Offline', IOT_SENSORS.filter(s=>s.status==='offline').length, 'red')}
+    </div>
+    <div id="iotGrid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3"></div>
+  </div>`;
+  renderIoTGrid();
+  if (iotInterval) clearInterval(iotInterval);
+  iotInterval = setInterval(() => {
+    if (currentPage !== 'iot') { clearInterval(iotInterval); return; }
+    IOT_SENSORS.forEach(s => { if (s.status !== 'offline') s.battery = Math.max(5, s.battery + (Math.random()>0.5?-1:0)); });
+    renderIoTGrid();
+  }, 4000);
+}
+function statChip(label, val, color) {
+  return `<div class="rounded-xl p-3 text-center" style="background:${colorBgSoft(color)}"><div class="font-display font-extrabold text-xl" style="color:${colorSolid(color)}">${val}</div><div class="text-xs text-muted">${label}</div></div>`;
+}
+function renderIoTGrid() {
+  const grid = document.getElementById('iotGrid');
+  if (!grid) return;
+  const statusStyle = { online:'text-green bg-green/10', warning:'text-orange bg-orange/10', offline:'text-red bg-red/10' };
+  grid.innerHTML = IOT_SENSORS.map(s => `
+    <div class="rounded-xl border border-slate-100 p-3.5">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="font-semibold text-sm">${s.id}</span>
+        <span class="tag ${statusStyle[s.status]}">${s.status}</span>
+      </div>
+      <div class="text-xs text-muted">${s.type}</div>
+      <div class="text-xs text-muted mb-2">${s.loc}</div>
+      <div class="flex justify-between text-xs"><span class="text-muted">Reading</span><span class="font-medium">${s.level}</span></div>
+      <div class="flex justify-between text-xs items-center mt-1">
+        <span class="text-muted">Battery</span>
+        <span class="font-medium flex items-center gap-1">${icon('battery','w-3.5 h-3.5')} ${s.battery}%</span>
+      </div>
+      <div class="text-[10px] text-muted mt-1.5">Last update: just now</div>
+    </div>`).join('');
+  refreshIcons();
+}
+
+// ---------------- Reports ----------------
+function renderReports(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5">
+    ${sectionHeader('Reports','Generate and export water intelligence reports')}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      ${REPORT_TYPES.map(r => `<div class="rounded-xl border border-slate-100 p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-blueLight text-blue flex items-center justify-center">${icon('file-text','w-5 h-5')}</div>
+          <span class="font-medium text-sm">${r}</span>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="generateReport('${r}')" class="text-xs font-semibold bg-blue text-white px-3 py-1.5 rounded-lg">Generate</button>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+function generateReport(name) {
+  openModal(`<div class="p-5">
+    <div class="flex items-center justify-between mb-3"><h3 class="font-display font-bold text-lg text-navy">${name}</h3><button onclick="closeModal()">${icon('x','w-5 h-5 text-muted')}</button></div>
+    <p class="text-sm text-muted mb-4">Report generated using simulated demo data as of ${new Date().toLocaleDateString('en-IN')}.</p>
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="downloadDemoReport('${name}')" class="flex items-center gap-1.5 text-xs font-semibold bg-navy text-white px-3 py-2 rounded-lg">${icon('download','w-4 h-4')} Export PDF</button>
+      <button onclick="downloadDemoReport('${name}')" class="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 px-3 py-2 rounded-lg">${icon('download','w-4 h-4')} Export CSV</button>
+      <button onclick="toast('Share link copied','success')" class="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 px-3 py-2 rounded-lg">${icon('share-2','w-4 h-4')} Share Report</button>
+    </div>
+  </div>`);
+}
+function downloadDemoReport(name) {
+  const content = `JalSuraksha — ${name}\nGenerated: ${new Date().toString()}\n\nThis is simulated demo data for prototype purposes only.\n\nOverall Water Security Index: 68/100\nHigh Risk Areas: 12\nTotal Water Demand (Annual): 482 MLD\nRecharge Potential: 310 MLD\n`;
+  const blob = new Blob([content], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${name.replace(/\s+/g,'_')}.txt`;
+  a.click();
+  toast('Report downloaded', 'success');
+}
+
+// ---------------- Citizen Portal ----------------
+function renderCitizen(host) {
+  host.innerHTML = `
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+    ${quickActionCard('droplets','Check Local Status','Groundwater & quality',"toast('Showing status for your area')")}
+    ${quickActionCard('map-pin','Find Water Resources','Nearby wells & sources',"toast('Locating nearby resources')")}
+    ${quickActionCard('calculator','Harvesting Potential','Rainwater calculator',"navigate('harvesting')")}
+  </div>
+  <div class="card p-4 lg:p-5 mb-4">
+    <h3 class="font-display font-bold text-navy mb-2">Local Water Status — Hapur</h3>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      ${metricTile('Groundwater Level','32.4 m','red')}
+      ${metricTile('Risk Status','Critical','red')}
+      ${metricTile('Water Quality','Moderate','yellow')}
+      ${metricTile('Nearby Alerts','2 Active','orange')}
+    </div>
+  </div>
+  <div class="card p-4 lg:p-5">
+    <h3 class="font-display font-bold text-navy mb-3">Report a Water Issue</h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div><label class="text-xs text-muted">Location</label><input placeholder="e.g. Ward 4, Hapur" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1"/></div>
+      <div><label class="text-xs text-muted">Issue Type</label>
+        <select class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1">
+          <option>Illegal Extraction</option><option>Water Quality Issue</option><option>Pipe Leakage</option><option>No Water Supply</option><option>Other</option>
+        </select>
+      </div>
+      <div class="lg:col-span-2"><label class="text-xs text-muted">Description</label><textarea rows="3" placeholder="Describe the issue..." class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1"></textarea></div>
+      <div><label class="text-xs text-muted">Photo</label><input type="file" class="w-full text-xs mt-1"/></div>
+    </div>
+    <button onclick="submitCitizenReport()" class="mt-4 bg-blue text-white text-sm font-semibold px-5 py-2.5 rounded-lg">Submit Report</button>
+  </div>`;
+}
+function submitCitizenReport() {
+  toast('Issue reported successfully. Reference ID: JS-'+Math.floor(1000+Math.random()*9000), 'success');
+}
+
+// ---------------- AI Assistant Page ----------------
+function renderAIPage(host) {
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5">
+    ${sectionHeader('JalSuraksha AI Assistant','Ask questions about groundwater, risk, crops and recharge planning')}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      ${AI_QA.map(qa => `<button onclick="askAIFromPage('${qa.q.replace(/'/g,"\\'")}')" class="text-left rounded-xl border border-slate-100 p-4 hover:border-blue hover:bg-blueLight transition">
+        <div class="flex items-center gap-2 text-sm font-medium">${icon('message-circle-question','w-4 h-4 text-blue flex-shrink-0')} ${qa.q}</div>
+      </button>`).join('')}
+    </div>
+    <div class="mt-4 text-xs text-muted">Tip: use the floating assistant button in the bottom-right corner to chat anytime, from any page.</div>
+  </div>`;
+}
+function askAIFromPage(q) {
+  toggleAIChat(true);
+  document.getElementById('aiInput').value = q;
+  sendAIMessage();
+}
+
+// ---------------- User Management ----------------
+function renderUsers(host) {
+  const users = [
+    { name:'Aman Malik', role:'Admin', dept:'State Water Authority', status:'Active' },
+    { name:'Priya Sharma', role:'District Officer', dept:'Hapur District', status:'Active' },
+    { name:'Ravi Kumar', role:'Field Surveyor', dept:'GIS Team', status:'Active' },
+    { name:'Neha Verma', role:'Researcher', dept:'CGWB Liaison', status:'Invited' },
+  ];
+  host.innerHTML = `
+  <div class="card p-4 lg:p-5">
+    ${sectionHeader('User Management','Manage platform access and roles', `<button onclick="toast('Invite sent','success')" class="text-xs font-semibold bg-blue text-white px-3 py-2 rounded-lg flex items-center gap-1.5">${icon('user-plus','w-4 h-4')} Invite User</button>`)}
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-muted border-b border-slate-100"><th class="py-2 pr-4">Name</th><th class="py-2 pr-4">Role</th><th class="py-2 pr-4">Department</th><th class="py-2">Status</th></tr></thead>
+      <tbody>${users.map(u=>`<tr class="border-b border-slate-50">
+        <td class="py-2.5 pr-4 font-medium">${u.name}</td><td class="py-2.5 pr-4">${u.role}</td><td class="py-2.5 pr-4">${u.dept}</td>
+        <td class="py-2.5"><span class="tag ${u.status==='Active'?'bg-green/15 text-green':'bg-yellow/20 text-[#8a6d1a]'}">${u.status}</span></td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+}
+
+// ---------------- Settings ----------------
+function renderSettings(host) {
+  host.innerHTML = `
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4 lg:p-5">
+      <h3 class="font-display font-bold text-navy mb-3">Preferences</h3>
+      ${settingsRow('Email Alerts', true)}
+      ${settingsRow('SMS Alerts for Critical Risk', true)}
+      ${settingsRow('Weekly Summary Report', false)}
+      ${settingsRow('Dark Mode', false)}
+    </div>
+    <div class="card p-4 lg:p-5">
+      <h3 class="font-display font-bold text-navy mb-3">Data Sources & Methodology</h3>
+      <p class="text-sm text-muted mb-3">JalSuraksha is designed to integrate with the following data sources in a production deployment. In this prototype, all values are simulated demo data.</p>
+      <div class="flex flex-wrap gap-2">
+        ${['data.gov.in','Central Ground Water Board','India Meteorological Dept.','ISRO / Bhuvan','Census of India','Kaggle Datasets','Hugging Face Datasets','IoT Sensors','User Reports'].map(s=>`<span class="tag bg-slate-100 text-txt">${s}</span>`).join('')}
+      </div>
+      <h4 class="font-semibold text-sm mt-4 mb-2">Pipeline</h4>
+      <div class="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        ${['Data Sources','Ingestion','Cleaning','Feature Engineering','ML Models','Prediction Engine','Risk Scoring','Recommendations','Dashboards'].map((s,i,arr)=>`<span class="bg-blueLight text-blue px-2 py-1 rounded-md font-medium">${s}</span>${i<arr.length-1?icon('arrow-right','w-3 h-3'):''}`).join('')}
+      </div>
+    </div>
+  </div>`;
+  refreshIcons();
+}
+function settingsRow(label, on) {
+  return `<div class="flex items-center justify-between py-2 border-b border-slate-50">
+    <span class="text-sm">${label}</span>
+    <div class="toggle-switch ${on?'on':''}" onclick="this.classList.toggle('on')"><div class="dot"></div></div>
+  </div>`;
+}
+
+// ============================================================
+// AI Chat Widget (floating)
+// ============================================================
+let aiChatOpen = false;
+let aiHistoryInit = false;
+function toggleAIChat(forceOpen) {
+  aiChatOpen = forceOpen===true ? true : !aiChatOpen;
+  const panel = document.getElementById('aiChatPanel');
+  panel.classList.toggle('hidden', !aiChatOpen);
+  panel.classList.toggle('flex', aiChatOpen);
+  if (aiChatOpen && !aiHistoryInit) {
+    aiHistoryInit = true;
+    addAIMessage('bot', "Namaste! I'm JalSuraksha AI. Ask me about groundwater risk, crops, recharge sites, or rainwater harvesting.");
+    renderAIQuickPrompts();
+  }
+}
+function renderAIQuickPrompts() {
+  document.getElementById('aiQuickPrompts').innerHTML = AI_QA.slice(0,3).map(qa=>`
+    <button onclick="document.getElementById('aiInput').value='${qa.q.replace(/'/g,"\\'")}'; sendAIMessage();" class="text-[11px] bg-blueLight text-blue px-2.5 py-1 rounded-full font-medium">${qa.q.length>28?qa.q.slice(0,26)+'…':qa.q}</button>`).join('');
+}
+function addAIMessage(who, text) {
+  const wrap = document.getElementById('aiMessages');
+  const bubble = document.createElement('div');
+  if (who === 'user') {
+    bubble.className = 'ml-auto max-w-[85%] bg-blue text-white rounded-2xl rounded-br-sm px-3.5 py-2';
+    bubble.textContent = text;
+  } else {
+    bubble.className = 'mr-auto max-w-[90%] bg-slate-100 rounded-2xl rounded-bl-sm px-3.5 py-2';
+    bubble.innerHTML = text;
+  }
+  wrap.appendChild(bubble);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function sendAIMessage() {
+  const input = document.getElementById('aiInput');
+  const q = input.value.trim();
+  if (!q) return;
+  addAIMessage('user', q);
+  input.value = '';
+  setTimeout(() => {
+    const match = AI_QA.find(qa => qa.q.toLowerCase() === q.toLowerCase()) ||
+                  AI_QA.find(qa => q.toLowerCase().includes(qa.q.split(' ')[1]?.toLowerCase()||'###'));
+    if (match) {
+      addAIMessage('bot', `
+        <div class="text-sm">${match.a}</div>
+        <div class="text-[11px] text-muted mt-1.5">Data used: ${match.data}</div>
+        <div class="text-[11px] text-muted">Confidence: ${match.confidence}%</div>
+        <div class="text-[11px] font-semibold text-blue mt-1">Recommended action: ${match.action}</div>
+      `);
+    } else {
+      addAIMessage('bot', `I don't have specific demo data for that yet, but based on general trends, I'd recommend checking the Groundwater Analysis or Risk &amp; Forecasting pages for related insights. <div class="text-[11px] text-muted mt-1.5">Confidence: 55%</div>`);
+    }
+  }, 500);
+}
+
+</script>
+</body>
+</html>
